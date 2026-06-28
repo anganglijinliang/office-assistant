@@ -1,0 +1,23 @@
+# 构建输出
+*.exe
+build/
+dist/
+*.spec
+
+# 临时文件
+__pycache__/
+*.pyc
+*.pyo
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# 测试文件
+test_*.py
+fix_refs.py
+clean_dead.py
+
+# 用户数据
+.office_assistant/
