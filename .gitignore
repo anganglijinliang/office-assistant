@@ -1,0 +1,15 @@
+# Build temp
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyz
+
+# Large binary (153MB exe — don't push to git)
+*.exe
+
+# Test script (not part of app)
+test_comprehensive.py
+
+# Windows reserved names
+nul
