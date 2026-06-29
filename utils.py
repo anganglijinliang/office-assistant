@@ -138,13 +138,18 @@ def register_chinese_font() -> None:
 
 def get_chinese_font_name() -> str:
     """获取当前系统可用中文字体名称，优先返回 Tkinter 可用字体。"""
-    families = []
+    # 优先：reportlab 已注册的中文字体
     try:
-        families = list(tk.font.families())
+        from reportlab.pdfbase import pdfmetrics
+        rl_fonts = list(pdfmetrics._fonts.keys())
+        for name in ('msyh', 'simsun', 'simhei', 'simkai', 'fangsong',
+                     'PingFang SC', 'STHeiti', 'Noto Sans CJK SC'):
+            if name in rl_fonts:
+                return name
     except Exception:
         pass
 
-    # 按优先级排列候选字体
+    # 次选：tkinter 可用字体
     preferred = ['微软雅黑', 'Microsoft YaHei', 'SimSun', 'SimHei',
                  'PingFang SC', 'STHeiti', 'Noto Sans CJK SC',
                  'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei',
@@ -162,7 +167,8 @@ def get_chinese_font_name() -> str:
             return f
         if 'simhei' in lower or '黑体' in f:
             return f
-    return 'TkDefaultFont'
+    # 最终回退：reportlab 默认字体
+    return 'Helvetica'
 
 
 def check_ocr_available() -> bool:
