@@ -23,20 +23,20 @@ class SearchToolsMixin:
         # 搜索参数区
         sf = tk.Frame(self.content_frame, bg=self.colors['light'])
         sf.pack(fill=tk.X, padx=20, pady=5)
-        tk.Label(sf, text="📁 目录:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=0, col=0, sticky="w")
+        tk.Label(sf, text="📁 目录:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=0, column=0, sticky="w")
         d_var = tk.StringVar(value=str(Path.home() / "Desktop"))
-        tk.Entry(sf, textvariable=d_var, width=45, font=("微软雅黑", 10)).grid(row=0, col=1, padx=5)
+        tk.Entry(sf, textvariable=d_var, width=45, font=("微软雅黑", 10)).grid(row=0, column=1, padx=5)
         tk.Button(sf, text="浏览", command=lambda: (d:=filedialog.askdirectory(), d_var.set(d) if d else None),
-                 cursor="hand2", font=("微软雅黑", 9)).grid(row=0, col=2)
-        tk.Label(sf, text="🔍 关键词:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=1, col=0, sticky="w", pady=(8,0))
+                 cursor="hand2", font=("微软雅黑", 9)).grid(row=0, column=2)
+        tk.Label(sf, text="🔍 关键词:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=1, column=0, sticky="w", pady=(8,0))
         kw_var = tk.StringVar()
         kw_entry = tk.Entry(sf, textvariable=kw_var, width=45, font=("微软雅黑", 10))
-        kw_entry.grid(row=1, col=1, padx=5, pady=(8,0))
-        tk.Label(sf, text="📄 类型:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=2, col=0, sticky="w", pady=(8,0))
+        kw_entry.grid(row=1, column=1, padx=5, pady=(8,0))
+        tk.Label(sf, text="📄 类型:", font=("微软雅黑", 10), bg=self.colors['light']).grid(row=2, column=0, sticky="w", pady=(8,0))
         ft_var = tk.StringVar(value="*.txt")
         ttk.Combobox(sf, textvariable=ft_var,
             values=["*.txt","*.py","*.md","*.csv","*.log","*.html","*.json","*.yaml","*.xml","*.*"],
-            state="readonly", width=16).grid(row=2, col=1, sticky="w", padx=5, pady=(8,0))
+            state="readonly", width=16).grid(row=2, column=1, sticky="w", padx=5, pady=(8,0))
 
         # 操作工具栏
         toolbar = tk.Frame(self.content_frame, bg=self.colors['light'])
