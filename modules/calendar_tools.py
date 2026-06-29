@@ -42,6 +42,9 @@ class CalendarToolsMixin:
         tk.Button(bf, text="🗑 清除已完成", command=self._todo_clear_done,
                  font=("微软雅黑", 9), cursor="hand2", fg=self.colors['danger'],
                  bg='white', bd=1, relief=tk.GROOVE).pack(side=tk.LEFT)
+        tk.Button(bf, text="⏰ 提醒", command=self._todo_set_reminder,
+                 font=("微软雅黑", 9), cursor="hand2", fg=self.colors['primary'],
+                 bg='white', bd=1, relief=tk.GROOVE).pack(side=tk.LEFT, padx=(5,0))
         self.todo_listbox = tk.Listbox(left, font=("微软雅黑", 10), bg='white',
                                        selectmode=tk.SINGLE, height=14)
         self.todo_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
@@ -169,8 +172,8 @@ class CalendarToolsMixin:
                             item["_reminded"] = True
                             diff = int((remind - now) / 60)
                             t = item["text"][:30]
-                            self.root.after(0, lambda: messagebox.showinfo("⏰ 提醒",
-                                f"事项「{t}」将在 {diff} 分钟后到期！"))
+                            self.root.after(0, lambda t=t, d=diff: messagebox.showinfo("⏰ 提醒",
+                                f"事项「{t}」将在 {d} 分钟后到期！"))
                 except Exception:
                     pass
                 time.sleep(30)

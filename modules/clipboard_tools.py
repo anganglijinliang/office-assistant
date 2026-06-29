@@ -67,6 +67,12 @@ class ClipboardToolsMixin:
                         pass
         except Exception:
             pass
+        # 持续调度定时器，避免单次后失效
+        try:
+            if self.root and self.root.winfo_exists():
+                self._auto_clip_timer()
+        except Exception:
+            pass
 
     def _clear_clip(self):
         self.clipboard_history = []
@@ -76,6 +82,7 @@ class ClipboardToolsMixin:
         if not self.clipboard_listbox:
             return
         self.clipboard_listbox.delete(0, tk.END)
+        self._clip_index_map = []
         keyword = ""
         try:
             for w in self.content_frame.winfo_children():
@@ -91,6 +98,7 @@ class ClipboardToolsMixin:
             if keyword and keyword not in txt.lower():
                 continue
             self.clipboard_listbox.insert(tk.END, f"  {txt}")
+            self._clip_index_map.append(i)
 
     def _paste_clip(self):
         sel = self.clipboard_listbox.curselection()
@@ -98,7 +106,8 @@ class ClipboardToolsMixin:
             return
         try:
             import pyperclip
-            text = self.clipboard_history[sel[0]]
+            idx = self._clip_index_map[sel[0]]
+            text = self.clipboard_history[idx]
             pyperclip.copy(text)
             self.set_status(f"已复制: {text[:40]}...")
         except Exception:

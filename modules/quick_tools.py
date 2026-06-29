@@ -306,7 +306,16 @@ class QuickToolsMixin:
                  font=("微软雅黑",9)).pack(side=tk.LEFT, padx=3)
         tk.Button(btn_f, text="压缩", command=lambda: _fmt(True), cursor="hand2",
                  font=("微软雅黑",9)).pack(side=tk.LEFT, padx=3)
-        tk.Button(btn_f, text="校验", command=lambda: _fmt(False), cursor="hand2",
+        def _validate():
+            try:
+                t = inp.get("1.0", tk.END).strip()
+                json.loads(t)
+                messagebox.showinfo("校验通过", "✅ JSON 格式正确")
+            except json.JSONDecodeError as e:
+                messagebox.showerror("格式错误", f"❌ {e}")
+            except Exception as e:
+                messagebox.showerror("错误", str(e))
+        tk.Button(btn_f, text="校验", command=_validate, cursor="hand2",
                  font=("微软雅黑",9)).pack(side=tk.LEFT, padx=3)
 
     def _regex_tester_dlg(self):

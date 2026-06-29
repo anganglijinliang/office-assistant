@@ -125,21 +125,27 @@ class ExcelToolsMixin:
         if not fp: return
         win = tk.Toplevel(self.root); win.title("数据统计"); win.geometry("600x400")
         win.transient(self.root); win.grab_set()
-        wb = openpyxl.load_workbook(fp, read_only=True); all_rows = list(wb.active.iter_rows(values_only=True)); wb.close()
+        try:
+            wb = openpyxl.load_workbook(fp, read_only=True); all_rows = list(wb.active.iter_rows(values_only=True)); wb.close()
+        except Exception as e:
+            messagebox.showerror("错误", f"无法读取文件: {e}"); return
         hdr = [str(c) for c in all_rows[0]] if all_rows else []
         log = scrolledtext.ScrolledText(win, height=15, font=("Consolas",9)); log.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        for ci in range(len(hdr)):
-            vals = []; n = 0
-            for r in all_rows[1:]:
-                v = r[ci]
-                if v is not None:
-                    try: vals.append(float(v)); n += 1
-                    except: pass
-            if vals:
-                mn, mx = min(vals), max(vals)
-                avg = sum(vals)/len(vals); sd = (sum((x-avg)**2 for x in vals)/len(vals))**0.5
-                log.insert(tk.END, f"【{hdr[ci]}】 n={n}  平均={avg:.2f}  最值={mn}-{mx}  标准差={sd:.2f}\n\n")
-        tk.Label(win, text="统计完成", font=("微软雅黑",9), fg="gray").pack()
+        try:
+            for ci in range(len(hdr)):
+                vals = []; n = 0
+                for r in all_rows[1:]:
+                    v = r[ci]
+                    if v is not None:
+                        try: vals.append(float(v)); n += 1
+                        except: pass
+                if vals:
+                    mn, mx = min(vals), max(vals)
+                    avg = sum(vals)/len(vals); sd = (sum((x-avg)**2 for x in vals)/len(vals))**0.5
+                    log.insert(tk.END, f"【{hdr[ci]}】 n={n}  平均={avg:.2f}  最值={mn}-{mx}  标准差={sd:.2f}\n\n")
+            tk.Label(win, text="统计完成", font=("微软雅黑",9), fg="gray").pack()
+        except Exception as e:
+            log.insert(tk.END, f"❌ 统计出错: {e}\n")
 
     def _excel_to_csv_dlg(self):
         fp = filedialog.askopenfilename(title="选择Excel", filetypes=[("Excel","*.xlsx")])

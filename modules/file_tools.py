@@ -105,8 +105,8 @@ class FileToolsMixin:
                     ok += 1
                 except Exception as e: fail += 1; log.insert(tk.END, f"  ❌ {Path(fp).name}: {e}\n")
             log.insert(tk.END, f"\n🎉 成功 {ok} 个, 失败 {fail} 个\n")
-            # 更新文件列表
-            files[:] = [str(Path(f).with_stem("_dummy_").parent / Path(f).name) for f in files]
+            # 更新文件列表以反映新名称
+            files.clear()
             _ref()
             self.set_status(f"重命名完成: {ok} 成功")
         btn_f = tk.Frame(win, bg=self.colors['light']); btn_f.pack(pady=5)
@@ -241,12 +241,6 @@ class FileToolsMixin:
         def _ref():
             lb.delete(0, tk.END)
             for f in files: lb.insert(tk.END, f"  {Path(f).name}  ({Path(f).parent.name})")
-        scroll = tk.Frame(win, bg=self.colors['light']); scroll.pack(fill=tk.X, padx=20)
-        copies_var = tk.IntVar(value=1)
-        tk.Label(scroll, text="打印份数:", bg=self.colors['light']).pack(side=tk.LEFT)
-        tk.Spinbox(scroll, from_=1, to=99, textvariable=copies_var, width=5).pack(side=tk.LEFT, padx=5)
-        show_preview = tk.BooleanVar(value=False)
-        tk.Checkbutton(scroll, text="预览", variable=show_preview, bg=self.colors['light']).pack(side=tk.LEFT, padx=10)
         log = scrolledtext.ScrolledText(win, height=8, font=("Consolas", 9)); log.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
         def _print():
             if not files: return messagebox.showwarning("提示", "请先添加文件")
@@ -306,7 +300,7 @@ class FileToolsMixin:
         src = filedialog.askdirectory(title="选择文件夹打包")
         if not src: return
         save = filedialog.asksaveasfilename(title="保存压缩包",
-            defaultextension=".zip", filetypes=[("ZIP","*.zip"),("7Z","*.7z")])
+            defaultextension=".zip", filetypes=[("ZIP","*.zip")])
         if not save: return
         def _go():
             import zipfile
@@ -342,7 +336,7 @@ class FileToolsMixin:
                 name = nv.get().strip() or Path(fp.get()).stem
                 dest_dir = Path(os.environ['USERPROFILE']) / "Desktop"
                 sc = dest_dir / f"{name}.lnk"
-                shortcut = shell.CreateShortCut(str(sc))
+                shortcut = shell.CreateShortcut(str(sc))
                 shortcut.TargetPath = fp.get()
                 shortcut.WorkingDirectory = str(Path(fp.get()).parent)
                 shortcut.Save()
@@ -365,16 +359,19 @@ class FileToolsMixin:
         d = scrolledtext.ScrolledText(win, height=10, font=("Consolas", 10)); d.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
         def _go():
             try:
-                p = Path(files[-1]) if files else Path.home(); cs = ""
-                for alg in ["md5","sha1","sha256"]:
-                    h = hashlib.new(alg)
-                    with open(str(p), 'rb') as fh:
-                        while True:
-                            chunk = fh.read(65536)
-                            if not chunk: break
-                            h.update(chunk)
-                    cs += f"{alg.upper()}: {h.hexdigest()}\n"
-                d.delete("1.0", tk.END); d.insert("1.0", cs)
+                d.delete("1.0", tk.END)
+                for p in files:
+                    pobj = Path(p)
+                    d.insert(tk.END, f"📄 {pobj.name}\\n")
+                    for alg in ["md5","sha1","sha256"]:
+                        h = hashlib.new(alg)
+                        with open(str(pobj), 'rb') as fh:
+                            while True:
+                                chunk = fh.read(65536)
+                                if not chunk: break
+                                h.update(chunk)
+                        d.insert(tk.END, f"  {alg.upper()}: {h.hexdigest()}\\n")
+                    d.insert(tk.END, "\\n")
             except Exception as e: messagebox.showerror("错误", str(e))
         tk.Button(win, text="🔐 计算校验和", command=_go, cursor="hand2",
                  bg=self.colors['primary'], fg="white", font=("微软雅黑", 11, "bold"), width=14).pack(pady=5)

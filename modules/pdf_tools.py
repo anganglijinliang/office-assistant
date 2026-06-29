@@ -9,7 +9,11 @@ from collections import Counter
 
 from utils import PDF_AVAILABLE, _PDF_ERROR, WORD_COM_AVAILABLE
 
-import PyPDF2
+# 模块级惰性导入（避免 ImportError 使 PDF_AVAILABLE 检查变成死代码）
+try:
+    import PyPDF2
+except ImportError:
+    PyPDF2 = None
 
 
 class PdfToolsMixin:
