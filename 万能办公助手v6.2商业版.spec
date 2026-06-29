@@ -23,7 +23,8 @@ a = Analysis(
           + lxml_datas + docx_datas + openpyxl_datas + pil_datas
           + reportlab_datas + pypdfium2_datas + pypdf2_datas
           + pdf2docx_datas + qrcode_datas,
-    hiddenimports=['pystray', 'win32api', 'win32com.client', 'pkg_resources']
+    hiddenimports=['pystray', 'win32api', 'win32com.client', 'pkg_resources',
+                    'shared.ui_common']
                  + lxml_hidden + docx_hidden + openpyxl_hidden + pil_hidden
                  + reportlab_hidden + pypdfium2_hidden + pypdf2_hidden
                  + pdf2docx_hidden + qrcode_hidden,
