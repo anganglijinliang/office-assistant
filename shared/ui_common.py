@@ -59,7 +59,7 @@ class BaseUIMixin:
         title_lbl = tk.Label(
             card, text=title, font=("微软雅黑", 12, "bold"),
             bg="white", fg=self.colors.get('dark', '#0F172A'),
-            anchor="w", padx=8, pady=(10, 2),
+            anchor="w", padx=8, pady=10,
         )
         title_lbl.pack(fill=tk.X)
 
@@ -67,7 +67,7 @@ class BaseUIMixin:
         desc_lbl = tk.Label(
             card, text=desc, font=("微软雅黑", 9),
             bg="white", fg=self.colors.get('gray', '#64748B'),
-            anchor="w", padx=8, pady=(0, 10),
+            anchor="w", padx=8, pady=10,
         )
         desc_lbl.pack(fill=tk.X)
 
@@ -138,7 +138,8 @@ class BaseUIMixin:
     def _run_thread(self, target: Callable, *,
                     args: tuple = (),
                     callback: Optional[Callable[[Any], None]] = None,
-                    daemon: bool = True) -> threading.Thread:
+                    daemon: bool = True,
+                    **kwargs) -> threading.Thread:
         """在后台线程中执行 target，可选完成回调。
 
         参数:
@@ -189,7 +190,7 @@ class BaseUIMixin:
         def _work():
             try:
                 dlg.update("正在执行...", 30)
-                result = target(*args)
+                result = target(dlg, *args)
                 dlg.update("即将完成...", 80)
                 # 短暂延迟让用户看到进度变化
                 import time

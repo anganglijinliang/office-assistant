@@ -59,7 +59,7 @@ class PdfToolsMixin:
             except Exception as e:
                 import traceback; err = traceback.format_exc(); pd.finish(fail=1, extra=err[-200:])
                 self.root.after(0, lambda: messagebox.showerror("错误", f"提取失败:\n{err[-600:]}"))
-        self._run_with_progress("PDF→文本", _go)
+        self._run_with_progress(_go, title="PDF→文本")
 
     def _merge_pdf_dlg(self):
         files = filedialog.askopenfilenames(title="选择PDF文件（按顺序合并）", filetypes=[("PDF","*.pdf")])
@@ -78,7 +78,7 @@ class PdfToolsMixin:
             except Exception as e:
                 import traceback; err = traceback.format_exc(); pd.finish(fail=1, extra=err[-200:])
                 self.root.after(0, lambda: messagebox.showerror("错误", f"合并失败:\n{err[-600:]}"))
-        self._run_with_progress("合并PDF", _go)
+        self._run_with_progress(_go, title="合并PDF")
 
     def _split_pdf_dlg(self):
         fp = filedialog.askopenfilename(title="选择PDF", filetypes=[("PDF","*.pdf")])
@@ -204,4 +204,4 @@ class PdfToolsMixin:
                         err += f"\n降级也失败: {e2}"
                 pd.finish(fail=1, extra=err[-200:])
                 self.root.after(0, lambda: messagebox.showerror("错误", f"转换失败:\n{err[-600:]}"))
-        self._run_with_progress("PDF→Word", _go)
+        self._run_with_progress(_go, title="PDF→Word")

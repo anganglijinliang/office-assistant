@@ -3,9 +3,9 @@
 万能办公助手 v6.2 — LicenseManager（许可证管理 + 加卸载安全防护）
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 职责：
-  · 试用期管理（7 天试用，自动创建/检查 license.dat）
   · 激活码验证（HMAC‑SHA256 自校验 16 位十六进制码）
-  · 激活/试用/过期界面和状态栏交互
+  · ¥29.9/年 激活制（无试用）
+  · 激活界面和状态栏交互
   · 卸载安全防护（防误删桌面/项目目录）
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import tkinter as tk
 
@@ -32,7 +32,7 @@ DATA_DIR = Path(os.environ.get("APPDATA", "")) / "OfficeAssistant_v6.2"
 LICENSE_FILE = DATA_DIR / "license.dat"
 
 # ── 许可证常量 ──────────────────────────────────────────
-TRIAL_DAYS = 7
+TRIAL_DAYS = 0  # 已停用试用模式，改为 ¥29.9/年直接激活
 _ACTIVATION_KEY: bytes = b"YTQJ2025_OFFICE_ASSISTANT_PRO"
 
 
@@ -109,51 +109,24 @@ class LicenseManager:
 
     def check_license(self) -> dict:
         """
-        检查许可证状态。创建 7 天试用（若 license.dat 不存在）。
+        检查许可证状态。不再自动创建试用；无许可文件时返回"请激活"。
 
         返回 dict（始终包含 'status' 和 'detail'）：
-          {'status': 'trial',   'days_left': N,    'detail': '试用期还剩 N 天'}
-          {'status': 'expired', 'days_left': 0,    'detail': '试用已过期'}
-          {'status': 'active',  'days_left': -1,   'detail': '已激活'}
+          {'status': 'active',  'days_left': -1,   'detail': '已激活（¥29.9/年）'}
+          {'status': 'expired', 'days_left': 0,    'detail': '请激活许可证'}
         """
         if not LICENSE_FILE.exists():
-            self._create_trial()
+            return {"status": "expired", "days_left": 0, "detail": "请激活许可证"}
 
         data = self._read_license()
         if data is None:
-            # 读取出错 → 重建试用
-            self._create_trial()
-            data = self._read_license()
-            if data is None:
-                return {"status": "expired", "days_left": 0, "detail": "许可证文件损坏"}
+            return {"status": "expired", "days_left": 0, "detail": "许可证文件损坏"}
 
         # 已激活 → 返回激活态
         if data.get("license_type") == "activated":
-            return {"status": "active", "days_left": -1, "detail": "已激活"}
+            return {"status": "active", "days_left": -1, "detail": "已激活（¥29.9/年）"}
 
-        # 试用 → 检查是否过期
-        if data.get("license_type") == "trial":
-            first_run = data.get("first_run")
-            if first_run is None:
-                self._create_trial()
-                return self.check_license()
-
-            try:
-                first_dt = datetime.fromisoformat(first_run)
-            except (ValueError, TypeError):
-                self._create_trial()
-                return self.check_license()
-
-            elapsed = datetime.now() - first_dt
-            days_left = TRIAL_DAYS - elapsed.days
-
-            if days_left > 0:
-                return {"status": "trial", "days_left": days_left,
-                        "detail": f"试用期还剩 {days_left} 天"}
-            else:
-                return {"status": "expired", "days_left": 0, "detail": "试用已过期"}
-
-        return {"status": "expired", "days_left": 0, "detail": "未知许可证状态"}
+        return {"status": "expired", "days_left": 0, "detail": "请激活许可证"}
 
     # ── 激活码验证 ────────────────────────────────────
 
@@ -189,18 +162,23 @@ class LicenseManager:
 
     # ── 激活对话框 ────────────────────────────────────
 
-    def activation_dialog(self) -> bool:
+    def activation_dialog(self, parent: Optional[tk.Toplevel] = None) -> bool:
         """
         弹出激活对话框（simpledialog）。
+
+        参数
+        ----
+        parent : 可选，指定对话框的父窗口（默认 self.root）
 
         返回
         ----
         bool  True = 激活成功
         """
+        p = parent if parent else self.root
         code = simpledialog.askstring(
             "激活许可证",
-            "请输入 16 位激活码（格式：xxxxxxxx-xxxxxxxx）：",
-            parent=self.root,
+            "万能办公助手 ¥29.9/年\n\n请输入 16 位激活码（格式：xxxxxxxx-xxxxxxxx）：\n\n（如需购买请前往面包多）",
+            parent=p,
         )
         if code is None:
             return False
@@ -232,6 +210,8 @@ class LicenseManager:
         overlay.title("许可证已过期")
         overlay.configure(bg="#1E1E1E")
         overlay.attributes("-topmost", True)
+        # 拦截关闭按钮 → 强制退出（不让用户关掉遮罩继续用）
+        overlay.protocol("WM_DELETE_WINDOW", lambda: self._on_overlay_exit(overlay))
 
         # 覆盖根窗口
         self.root.update_idletasks()
@@ -241,16 +221,17 @@ class LicenseManager:
         h = max(self.root.winfo_height(), 600)
         overlay.geometry(f"{w}x{h}+{x}+{y}")
         overlay.resizable(False, False)
+        overlay.grab_set()  # 确保遮罩是模态的，阻止点击下层窗口
 
         # 内容
         frame = tk.Frame(overlay, bg="#2D2D2D", bd=0)
         frame.place(relx=0.5, rely=0.45, anchor="center")
 
-        tk.Label(frame, text="⏰ 试用已过期", font=("微软雅黑", 20, "bold"),
-                 bg="#2D2D2D", fg="#FF6B6B").pack(pady=(30, 10))
+        tk.Label(frame, text="🔑 需激活许可证", font=("微软雅黑", 20, "bold"),
+                 bg="#2D2D2D", fg="#FF9800").pack(pady=(30, 10))
 
-        tk.Label(frame, text="请激活许可证以继续使用全部功能",
-                 font=("微软雅黑", 11), bg="#2D2D2D", fg="#CCCCCC").pack(pady=(0, 25))
+        tk.Label(frame, text="¥29.9/年 · 请激活后使用", font=("微软雅黑", 11),
+                 bg="#2D2D2D", fg="#CCCCCC").pack(pady=(0, 25))
 
         btn_frame = tk.Frame(frame, bg="#2D2D2D")
         btn_frame.pack(pady=(0, 30))
@@ -274,7 +255,7 @@ class LicenseManager:
 
     def _on_overlay_activate(self, overlay: tk.Toplevel) -> None:
         """遮罩层『激活』按钮回调。"""
-        if self.activation_dialog():
+        if self.activation_dialog(parent=overlay):
             self._destroy_overlay()
             self.root.deiconify()
             self.root.lift()
@@ -287,6 +268,11 @@ class LicenseManager:
             pass
         try:
             self.root.destroy()
+        except Exception:
+            pass
+        # 兜底强制退出
+        try:
+            os._exit(0)
         except Exception:
             pass
 
@@ -308,12 +294,9 @@ class LicenseManager:
         if info["status"] == "active":
             text = "✅ 已激活"
             fg = "#4CAF50"  # 绿
-        elif info["status"] == "trial":
-            text = f"🔶 试用期 {info['days_left']} 天"
-            fg = "#FF9800"  # 橙
         else:
-            text = "❌ 已过期"
-            fg = "#F44336"  # 红
+            text = "🔑 需激活"
+            fg = "#FF9800"  # 橙
         try:
             self._status_bar.configure(text=text, fg=fg)
         except Exception:
@@ -323,40 +306,40 @@ class LicenseManager:
 
     def check_and_show_license_warning(self) -> bool:
         """
-        检查许可证状态；若即将过期 / 已过期则弹出提示。
+        检查许可证状态。未激活则弹出遮罩阻塞界面。
 
         返回
         ----
-        bool  True = 可以继续使用（已激活或试用中）
-              False = 已过期，需要拦截
+        bool  True = 可以继续使用（已激活）
+              False = 需要激活许可证
         """
         info = self.check_license()
 
         if info["status"] == "active":
             return True
 
-        if info["status"] == "trial":
-            days = info["days_left"]
-            if days <= 2:
-                messagebox.showwarning(
-                    "许可证即将过期",
-                    f"⚠️ 您的试用期还剩 {days} 天，请及时激活。",
-                    parent=self.root,
-                )
-            return True
+        # 未激活 → 弹出遮罩
+        if not LICENSE_FILE.exists():
+            messagebox.showinfo(
+                "欢迎使用",
+                "🎉 万能办公助手 v6.2\n\n"
+                "售价：¥29.9/年\n"
+                "请激活后使用。",
+                parent=self.root,
+            )
+        else:
+            messagebox.showerror(
+                "许可证无效",
+                "⛔ 许可证无效或已损坏，请重新激活。",
+                parent=self.root,
+            )
 
-        # expired
-        messagebox.showerror(
-            "许可证已过期",
-            "⛔ 试用期已结束，请激活许可证后继续使用。",
-            parent=self.root,
-        )
         self.expired_overlay()
         return False
 
     # ── 欢迎对话框 ────────────────────────────────────
 
-    def show_welcome_dialog(self) -> None:
+    def show_welcome_dialog(self, on_close: Optional[Callable] = None) -> None:
         """启动时显示欢迎/许可证信息对话框。"""
         info = self.check_license()
 
@@ -366,6 +349,9 @@ class LicenseManager:
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
+        # 拦截关闭按钮 → 触发 on_close（进激活流程）
+        if on_close:
+            dialog.protocol("WM_DELETE_WINDOW", lambda: [dialog.destroy(), on_close()])
 
         # 窗口尺寸与居中
         win_w, win_h = 480, 380
@@ -382,18 +368,10 @@ class LicenseManager:
         if info["status"] == "active":
             tk.Label(dialog, text="✅ 已激活 · 完整功能已解锁", font=("微软雅黑", 11),
                      bg="#F5F5F5", fg="#4CAF50").pack(pady=(5, 20))
-        elif info["status"] == "trial":
-            days = info["days_left"]
-            tk.Label(dialog, text=f"🔶 试用中 · 剩余 {days} 天", font=("微软雅黑", 11),
+        else:
+            tk.Label(dialog, text="🔑 需激活 · ¥29.9/年", font=("微软雅黑", 11),
                      bg="#F5F5F5", fg="#FF9800").pack(pady=(5, 10))
             tk.Button(dialog, text="🔑 立即激活", font=("微软雅黑", 10),
-                      bg=self.colors.get("primary", "#4F46E5"), fg="white",
-                      cursor="hand2", command=lambda: self._welcome_activate(dialog),
-                      ).pack(pady=(5, 20))
-        else:
-            tk.Label(dialog, text="❌ 试用已过期", font=("微软雅黑", 11),
-                     bg="#F5F5F5", fg="#F44336").pack(pady=(5, 10))
-            tk.Button(dialog, text="🔑 激活许可证", font=("微软雅黑", 10),
                       bg=self.colors.get("primary", "#4F46E5"), fg="white",
                       cursor="hand2", command=lambda: self._welcome_activate(dialog),
                       ).pack(pady=(5, 20))
@@ -413,7 +391,8 @@ class LicenseManager:
 
         btn = tk.Button(dialog, text="开始使用", font=("微软雅黑", 11, "bold"),
                         bg=self.colors.get("primary", "#4F46E5"), fg="white",
-                        cursor="hand2", width=12, command=dialog.destroy)
+                        cursor="hand2", width=12,
+                        command=lambda: [dialog.destroy(), on_close() if on_close else None])
         btn.pack(pady=(15, 25))
 
         dialog.wait_window()
@@ -439,11 +418,9 @@ class LicenseManager:
             "━━━ 许可证 ━━━",
         ]
         if info["status"] == "active":
-            lines.append("✅ 已激活（完整版）")
-        elif info["status"] == "trial":
-            lines.append(f"🔶 试用中（剩余 {info['days_left']} 天）")
+            lines.append("✅ 已激活（完整版 · ¥29.9/年）")
         else:
-            lines.append("❌ 试用已过期")
+            lines.append("🔑 需激活 · ¥29.9/年")
 
         lines += [
             "",

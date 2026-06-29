@@ -37,7 +37,7 @@ from utils import (
     register_chinese_font, get_chinese_font_name, esc_xml,
     check_ocr_available,
 )
-from lib_license import LicenseManager
+from lib_license import LicenseManager, LICENSE_FILE
 
 # 模块化Mixin导入（仅导入实际存在的模块）
 from modules.file_tools import FileToolsMixin
@@ -111,8 +111,11 @@ class OfficeAssistant(
         self.license_label = None
         self.license = LicenseManager(self)
         self._setup_ui()
-        if not self.license.LICENSE_FILE.exists():
-            self.root.after(500, self.license.show_welcome_dialog)
+        if not LICENSE_FILE.exists():
+            # 首次启动：欢迎 + 激活提示 → 之后检查许可证
+            self.root.after(500, lambda: self.license.show_welcome_dialog(
+                on_close=lambda: self.root.after(200, self.license.check_and_show_license_warning)
+            ))
         else:
             self.root.after(1000, self.license.check_and_show_license_warning)
         self.root.bind('<Control-f>', lambda e: self._focus_search())

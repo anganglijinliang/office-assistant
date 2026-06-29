@@ -224,21 +224,33 @@ class ConvertToolsMixin:
 
     def _word_to_pdf_com(self, src: str, dst: str, log_widget=None):
         """使用 Win32 COM (Word.Application) 转换 docx → PDF。"""
+        win32 = _import_win32com()
+        word = None
+        doc = None
         try:
-            win32 = _import_win32com()
             word = win32.Dispatch("Word.Application")
             word.Visible = False
             word.DisplayAlerts = False
             doc = word.Documents.Open(os.path.abspath(src))
             # wdFormatPDF = 17
             doc.SaveAs(os.path.abspath(dst), FileFormat=17)
-            doc.Close()
-            word.Quit()
         except Exception as e:
             if log_widget:
                 log_widget.insert(tk.END, f"⚠ COM 转换失败: {e}，尝试回退...\n")
                 log_widget.see(tk.END)
             raise
+        finally:
+            # 清理 COM 对象（独立 try/except，不让 Close/Quit 异常掩盖成功）
+            try:
+                if doc:
+                    doc.Close()
+            except Exception:
+                pass
+            try:
+                if word:
+                    word.Quit()
+            except Exception:
+                pass
 
     def _word_to_pdf_reportlab(self, src: str, dst: str, log_widget=None):
         """使用 reportlab 重建 Word → PDF（读取 docx 文本内容后渲染）。"""

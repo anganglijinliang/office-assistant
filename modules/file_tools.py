@@ -34,17 +34,86 @@ class FileToolsMixin:
         self._create_card(row3, " 🔐 文件校验", "MD5/SHA1/SHA256", self._checksum_dlg, "开始")
 
     def _batch_rename_dialog(self):
-        win = tk.Toplevel(self.root); win.title("批量重命名"); win.geometry("700x520")
+        win = tk.Toplevel(self.root); win.title("批量重命名"); win.geometry("750x580")
         win.transient(self.root); win.grab_set(); win.configure(bg=self.colors['light'])
         tk.Label(win, text="📝 批量重命名", font=("微软雅黑", 14, "bold"), bg=self.colors['light']).pack(pady=8)
-        tk.Label(win, text="选择文件或文件夹 → 设置规则 → 预览 → 执行",
-                font=("微软雅黑", 9), fg="gray", bg=self.colors['light']).pack()
+        tk.Label(win, text="①添加文件 ②设置规则 ③预览 ④执行", font=("微软雅黑", 9), fg="gray", bg=self.colors['light']).pack()
         files = []
-        self._show_inputs(win, files)
+        # 文件选择区
+        sel_f = tk.Frame(win, bg=self.colors['light']); sel_f.pack(fill=tk.X, padx=15, pady=5)
+        tk.Button(sel_f, text="📂 添加文件", command=lambda: _pick(), cursor="hand2",
+                  bg=self.colors['primary'], fg="white", font=("微软雅黑", 9)).pack(side=tk.LEFT, padx=2)
+        tk.Button(sel_f, text="📂 添加文件夹", command=lambda: _pick_dir(), cursor="hand2",
+                  font=("微软雅黑", 9)).pack(side=tk.LEFT, padx=2)
+        tk.Button(sel_f, text="🗑 清空", command=lambda: (files.clear(), _ref()), cursor="hand2",
+                  font=("微软雅黑", 9)).pack(side=tk.LEFT, padx=2)
+        file_lb = tk.Listbox(win, height=4, font=("Consolas", 9)); file_lb.pack(fill=tk.X, padx=15, pady=3)
+        def _pick():
+            f = filedialog.askopenfilenames(title="选择文件")
+            for p in f:
+                if p not in files: files.append(p)
+            _ref()
+        def _pick_dir():
+            d = filedialog.askdirectory(title="选择文件夹")
+            if d:
+                for p in Path(d).rglob("*"):
+                    if p.is_file() and str(p) not in files: files.append(str(p))
+            _ref()
+        def _ref():
+            file_lb.delete(0, tk.END)
+            for f in files[-50:]: file_lb.insert(tk.END, f"  {Path(f).name}")
+        # 规则设置区
+        rule_f = tk.Frame(win, bg=self.colors['light']); rule_f.pack(fill=tk.X, padx=15, pady=5)
+        mode_var = tk.StringVar(value="prefix")
+        tk.Radiobutton(rule_f, text="加前缀", variable=mode_var, value="prefix", bg=self.colors['light']).grid(row=0, col=0)
+        tk.Radiobutton(rule_f, text="加后缀", variable=mode_var, value="suffix", bg=self.colors['light']).grid(row=0, col=1)
+        tk.Radiobutton(rule_f, text="替换", variable=mode_var, value="replace", bg=self.colors['light']).grid(row=0, col=2)
+        tk.Radiobutton(rule_f, text="序号", variable=mode_var, value="number", bg=self.colors['light']).grid(row=0, col=3)
+        tk.Label(rule_f, text="文本:", bg=self.colors['light']).grid(row=1, col=0, pady=5, sticky="e")
+        txt_var = tk.StringVar(value="new_")
+        tk.Entry(rule_f, textvariable=txt_var, width=18, font=("微软雅黑", 9)).grid(row=1, col=1, padx=3)
+        tk.Label(rule_f, text="旧文本(替换时):", bg=self.colors['light']).grid(row=1, col=2, sticky="e")
+        old_var = tk.StringVar(value="old")
+        tk.Entry(rule_f, textvariable=old_var, width=14, font=("微软雅黑", 9)).grid(row=1, col=3, padx=3)
         log = scrolledtext.ScrolledText(win, height=10, font=("Consolas", 9), bg="white")
         log.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
-        def _show_inputs(parent, files):
-            pass
+        def _preview():
+            log.delete("1.0", tk.END)
+            if not files: return log.insert(tk.END, "请先添加文件\n")
+            mode = mode_var.get(); text = txt_var.get(); old = old_var.get()
+            for i, fp in enumerate(files):
+                p = Path(fp); name = p.stem; ext = p.suffix
+                new_name = name
+                if mode == "prefix": new_name = text + name
+                elif mode == "suffix": new_name = name + text
+                elif mode == "replace": new_name = name.replace(old, text)
+                elif mode == "number": new_name = f"{text}{i+1:03d}"
+                log.insert(tk.END, f"  {name}{ext} → {new_name}{ext}\n")
+        def _execute():
+            if not files: return messagebox.showwarning("提示","请先添加文件")
+            mode = mode_var.get(); text = txt_var.get(); old = old_var.get()
+            ok, fail = 0, 0
+            for i, fp in enumerate(files):
+                try:
+                    p = Path(fp); name = p.stem; ext = p.suffix
+                    new_name = name
+                    if mode == "prefix": new_name = text + name
+                    elif mode == "suffix": new_name = name + text
+                    elif mode == "replace": new_name = name.replace(old, text)
+                    elif mode == "number": new_name = f"{text}{i+1:03d}"
+                    p.rename(p.with_stem(new_name))
+                    ok += 1
+                except Exception as e: fail += 1; log.insert(tk.END, f"  ❌ {Path(fp).name}: {e}\n")
+            log.insert(tk.END, f"\n🎉 成功 {ok} 个, 失败 {fail} 个\n")
+            # 更新文件列表
+            files[:] = [str(Path(f).with_stem("_dummy_").parent / Path(f).name) for f in files]
+            _ref()
+            self.set_status(f"重命名完成: {ok} 成功")
+        btn_f = tk.Frame(win, bg=self.colors['light']); btn_f.pack(pady=5)
+        tk.Button(btn_f, text="👁 预览", command=_preview, cursor="hand2",
+                  font=("微软雅黑", 10)).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_f, text="🚀 执行重命名", command=_execute, cursor="hand2",
+                  bg=self.colors['primary'], fg="white", font=("微软雅黑", 11, "bold"), width=14).pack(side=tk.LEFT, padx=5)
 
     def _classify_files_dlg(self):
         win = tk.Toplevel(self.root); win.title("文件分类"); win.geometry("600x480")
@@ -53,12 +122,12 @@ class FileToolsMixin:
         tk.Label(win, text="按文件类型自动归类到子目录", font=("微软雅黑", 9), fg="gray", bg=self.colors['light']).pack()
         opt_f = tk.Frame(win, bg=self.colors['light']); opt_f.pack(pady=10)
         src = tk.StringVar(); tgt = tk.StringVar()
-        tk.Label(opt_f, text="源目录:", bg=self.colors['light']).grid(row=0, col=0)
-        tk.Entry(opt_f, textvariable=src, width=40).grid(row=0, col=1, padx=5)
-        tk.Button(opt_f, text="浏览", command=lambda: src.set(filedialog.askdirectory() or src.get())).grid(row=0, col=2)
-        tk.Label(opt_f, text="目标目录:", bg=self.colors['light']).grid(row=1, col=0, pady=8)
-        tk.Entry(opt_f, textvariable=tgt, width=40).grid(row=1, col=1, padx=5)
-        tk.Button(opt_f, text="浏览", command=lambda: tgt.set(filedialog.askdirectory() or tgt.get())).grid(row=1, col=2)
+        tk.Label(opt_f, text="源目录:", bg=self.colors['light']).grid(row=0, column=0)
+        tk.Entry(opt_f, textvariable=src, width=40).grid(row=0, column=1, padx=5)
+        tk.Button(opt_f, text="浏览", command=lambda: src.set(filedialog.askdirectory() or src.get())).grid(row=0, column=2)
+        tk.Label(opt_f, text="目标目录:", bg=self.colors['light']).grid(row=1, column=0, pady=8)
+        tk.Entry(opt_f, textvariable=tgt, width=40).grid(row=1, column=1, padx=5)
+        tk.Button(opt_f, text="浏览", command=lambda: tgt.set(filedialog.askdirectory() or tgt.get())).grid(row=1, column=2)
         recursive = tk.BooleanVar(value=True)
         tk.Checkbutton(opt_f, text="递归子目录", variable=recursive, bg=self.colors['light']).grid(row=2, columnspan=2, pady=5)
         copy_mode = tk.BooleanVar(value=False)
@@ -123,8 +192,14 @@ class FileToolsMixin:
                 log.insert(tk.END, f"扫描 {p} ...\n")
                 for f in p.rglob("*"):
                     if f.is_file() and f.stat().st_size > 0:
-                        h = hashlib.md5(f.read_bytes()).hexdigest()
-                        dup_map.setdefault(h, []).append(f)
+                        h = hashlib.md5()
+                        with open(f, 'rb') as fh:
+                            while True:
+                                chunk = fh.read(65536)
+                                if not chunk: break
+                                h.update(chunk)
+                        hex_digest = h.hexdigest()
+                        dup_map.setdefault(hex_digest, []).append(f)
                         count += 1
                         if count % 100 == 0:
                             log.insert(tk.END, f"  已扫描 {count} 个文件...\n"); log.see(tk.END); win.update()
@@ -246,7 +321,7 @@ class FileToolsMixin:
                 self.root.after(0, lambda: self._show_success_dialog("完成", f"打包完成\n{save}\n共 {len(log_text)} 个文件"))
             except Exception as e:
                 self.root.after(0, lambda: messagebox.showerror("错误", str(e)))
-        self._run_thread(_go, done_msg="打包完成")
+        self._run_thread(_go)
 
     def _shortcut_dlg(self):
         win = tk.Toplevel(self.root); win.title("创建快捷方式"); win.geometry("550x300")

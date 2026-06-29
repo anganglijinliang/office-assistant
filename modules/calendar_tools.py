@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from pathlib import Path
 import os, sys, json, time, shutil, hashlib, threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import Counter
 
 from utils import DATA_DIR
@@ -131,7 +131,7 @@ class CalendarToolsMixin:
                     if remind_dt < datetime.now():
                         remind_dt = remind_dt.replace(day=remind_dt.day+1)
                 else:
-                    remind_dt = remind_dt.replace(second=0) + threading.Timer(float(t_var.get())*60, lambda: None).interval
+                    remind_dt = remind_dt.replace(second=0) + timedelta(minutes=float(t_var.get()))
                 idx2 = self.todo_listbox.curselection()
                 if idx2 and idx2[0] < len(self._todo_data):
                     self._todo_data[idx2[0]]["remind"] = remind_dt.timestamp()

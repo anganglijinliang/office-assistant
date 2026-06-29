@@ -7,7 +7,7 @@ import os, sys, json, time, shutil, hashlib, threading
 from datetime import datetime
 from collections import Counter
 
-from utils import OPENPYL_AVAILABLE, _OPENPYL_ERROR, safe_str
+from utils import OPENPYL_AVAILABLE, _OPENPYL_ERROR, safe_str, safe_cond_check
 
 import openpyxl
 from openpyxl.styles import PatternFill

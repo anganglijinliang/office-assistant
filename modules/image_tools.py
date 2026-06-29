@@ -109,7 +109,11 @@ class ImageToolsMixin:
                     img = Image.open(fp).convert("RGBA")
                     overlay = Image.new("RGBA", img.size, (0,0,0,0))
                     draw = ImageDraw.Draw(overlay)
-                    font = get_font(size)
+                    try:
+                        from PIL import ImageFont
+                        font = ImageFont.truetype("msyh.ttc", size)
+                    except Exception:
+                        font = ImageFont.load_default()
                     bbox = draw.textbbox((0,0), text, font=font)
                     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
                     margin = 20
