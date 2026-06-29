@@ -40,11 +40,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "快捷方式:"; Flags: checkedonce
 
 [Files]
-Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
-; 注意: dist\_internal 是 PyInstaller 单文件 exe 运行时解压的内部目录
-; 如果 exe 是单文件模式（onefile），上述 _internal 行应移除
-; 当前构建为 onefile，所以只打包 exe 即可（_internal 不需要）
+Source: "dist\\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; 单文件模式（onefile），无需打包 _internal 目录
+; 如需非单文件构建，取消下面行的注释并注释掉上面那行
+; Source: "dist\\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "dist\\_internal\\*"; DestDir: "{app}\\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
