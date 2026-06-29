@@ -445,6 +445,16 @@ class LicenseManager:
         else:
             lines.append("❌ 试用已过期")
 
+        lines += [
+            "",
+            "━━━ 安装信息 ━━━",
+            f"📂 安装路径: {Path(sys.executable).resolve().parent}",
+            f"📦 大小: 约 153 MB",
+            "",
+            "💡 如需移动到 Program Files，请运行",
+            "   安装万能办公助手.bat（管理员权限）",
+        ]
+
         messagebox.showinfo(
             "关于 万能办公助手",
             "\n".join(lines),

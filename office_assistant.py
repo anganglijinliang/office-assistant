@@ -162,6 +162,10 @@ class OfficeAssistant(
                  font=("微软雅黑", 9), bd=0, padx=8, pady=2,
                  bg=self.colors['dark'], fg="#94A3B8",
                  activebackground='#1E293B', activeforeground='white').pack(side=tk.RIGHT, padx=4)
+        tk.Button(top_bar, text="⚙ 卸载", command=self.license.uninstall_dialog, cursor="hand2",
+                 font=("微软雅黑", 9), bd=0, padx=8, pady=2,
+                 bg=self.colors['dark'], fg="#F87171",
+                 activebackground='#1E293B', activeforeground='#FCA5A5').pack(side=tk.RIGHT, padx=4)
         nav = tk.Frame(self.root, bg=self.colors['nav_bg'], width=220)
         nav.pack(side=tk.LEFT, fill=tk.Y)
         nav.pack_propagate(False)
