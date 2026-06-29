@@ -38,7 +38,8 @@ class BaseUIMixin:
     # ── 卡片创建 ────────────────────────────────────────────────────────
 
     def _create_card(self, parent: tk.Frame, title: str,
-                     desc: str, callback: Callable[[], Any]) -> None:
+                     desc: str, callback: Callable[[], Any],
+                     btn_text: str = "") -> None:
         """在 parent 容器中创建一个带标题+描述的可点击卡片。
 
         参数:
@@ -46,6 +47,7 @@ class BaseUIMixin:
             title:    卡片标题（可含 emoji）
             desc:     卡片描述文字
             callback: 点击回调函数
+            btn_text: 可选按钮文字（如 "开始"），提供则卡片底部显示按钮
         """
         card = tk.Frame(
             parent, bg="white", relief=tk.GROOVE, bd=1,
@@ -69,8 +71,24 @@ class BaseUIMixin:
         )
         desc_lbl.pack(fill=tk.X)
 
-        # 绑定点击事件到整个卡片
-        for widget in (card, title_lbl, desc_lbl):
+        # 可选按钮
+        btn = None
+        if btn_text:
+            btn = tk.Button(
+                card, text=btn_text, cursor="hand2",
+                font=("微软雅黑", 9), bd=0, padx=8, pady=2,
+                bg=self.colors.get('primary', '#4F46E5'),
+                fg="white", command=callback,
+                activebackground=self.colors.get('primary_hover', '#4338CA'),
+                activeforeground="white",
+            )
+            btn.pack(anchor="e", padx=(0, 8), pady=(0, 6))
+
+        # 绑定点击事件到整个卡片（有按钮时不覆盖按钮点击区域）
+        click_widgets = (card, title_lbl, desc_lbl)
+        if btn:
+            click_widgets = (card, title_lbl, desc_lbl)
+        for widget in click_widgets:
             widget.bind("<Button-1>", lambda e, cb=callback: cb())
             widget.bind("<Enter>", lambda e: (
                 card.configure(bg="#F1F5F9"),
