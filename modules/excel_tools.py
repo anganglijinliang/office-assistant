@@ -123,29 +123,166 @@ class ExcelToolsMixin:
     def _stats_excel_dlg(self):
         fp = filedialog.askopenfilename(title="选择Excel", filetypes=[("Excel","*.xlsx")])
         if not fp: return
-        win = tk.Toplevel(self.root); win.title("数据统计"); win.geometry("600x400")
+        win = tk.Toplevel(self.root); win.title("数据统计分析"); win.geometry("720x520")
         win.transient(self.root); win.grab_set()
+
+        # 顶栏信息
+        top_f = tk.Frame(win, bg=self.colors['light']); top_f.pack(fill=tk.X, padx=15, pady=8)
+        tk.Label(top_f, text="📊 数据统计分析", font=("微软雅黑", 14, "bold"),
+                 bg=self.colors['light']).pack(side=tk.LEFT)
+        status_var = tk.StringVar(value="正在读取...")
+        tk.Label(top_f, textvariable=status_var, font=("微软雅黑", 9),
+                 fg="gray", bg=self.colors['light']).pack(side=tk.RIGHT)
+
+        # Notebook: 统计结果 + 原始数据预览
+        nb = ttk.Notebook(win); nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        # Tab1: 统计结果
+        tab1 = tk.Frame(nb); nb.add(tab1, text="📈 统计结果")
+        log = scrolledtext.ScrolledText(tab1, height=20, font=("Consolas", 10))
+        log.pack(fill=tk.BOTH, expand=True, padx=8, pady=5)
+
+        # Tab2: 原始数据预览
+        tab2 = tk.Frame(nb); nb.add(tab2, text="📋 数据预览")
+        preview = scrolledtext.ScrolledText(tab2, height=20, font=("Consolas", 10))
+        preview.pack(fill=tk.BOTH, expand=True, padx=8, pady=5)
+
         try:
-            wb = openpyxl.load_workbook(fp, read_only=True); all_rows = list(wb.active.iter_rows(values_only=True)); wb.close()
+            wb = openpyxl.load_workbook(fp, read_only=True)
+            ws = wb.active
+            all_rows = list(ws.iter_rows(values_only=True))
+            wb.close()
         except Exception as e:
             messagebox.showerror("错误", f"无法读取文件: {e}"); return
-        hdr = [str(c) for c in all_rows[0]] if all_rows else []
-        log = scrolledtext.ScrolledText(win, height=15, font=("Consolas",9)); log.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        try:
-            for ci in range(len(hdr)):
-                vals = []; n = 0
-                for r in all_rows[1:]:
-                    v = r[ci]
-                    if v is not None:
-                        try: vals.append(float(v)); n += 1
-                        except: pass
-                if vals:
-                    mn, mx = min(vals), max(vals)
-                    avg = sum(vals)/len(vals); sd = (sum((x-avg)**2 for x in vals)/len(vals))**0.5
-                    log.insert(tk.END, f"【{hdr[ci]}】 n={n}  平均={avg:.2f}  最值={mn}-{mx}  标准差={sd:.2f}\n\n")
-            tk.Label(win, text="统计完成", font=("微软雅黑",9), fg="gray").pack()
-        except Exception as e:
-            log.insert(tk.END, f"❌ 统计出错: {e}\n")
+
+        if not all_rows:
+            log.insert(tk.END, "文件为空\n"); return
+
+        hdr = [str(c) for c in all_rows[0]]
+        data_rows = all_rows[1:]
+        total_rows = len(data_rows)
+        total_cols = len(hdr)
+
+        # 数据预览（前30行）
+        preview.insert(tk.END, f"📄 {Path(fp).name}  |  共 {total_rows} 行 × {total_cols} 列\n\n")
+        preview.insert(tk.END, f"{'行号':>4} │ " + " │ ".join(f"{h:<12}" for h in hdr[:6]) + "\n")
+        preview.insert(tk.END, "─" * 80 + "\n")
+        for i, r in enumerate(data_rows[:30], 1):
+            vals = [str(v)[:12] if v is not None else "" for v in r[:6]]
+            preview.insert(tk.END, f"{i:>4} │ " + " │ ".join(f"{v:<12}" for v in vals) + "\n")
+        if total_rows > 30:
+            preview.insert(tk.END, f"\n... 仅显示前30行，共 {total_rows} 行\n")
+
+        # 统计分析
+        status_var.set(f"分析 {total_cols} 列...")
+        win.update()
+
+        from collections import Counter
+        import math
+
+        log.insert(tk.END, f"{'='*60}\n")
+        log.insert(tk.END, f"  万能办公助手 — 数据统计分析报告\n")
+        log.insert(tk.END, f"  文件: {Path(fp).name}\n")
+        log.insert(tk.END, f"  规模: {total_rows} 行 × {total_cols} 列\n")
+        log.insert(tk.END, f"{'='*60}\n\n")
+
+        numeric_cols = 0
+        text_cols = 0
+
+        for ci in range(total_cols):
+            col_name = hdr[ci] if ci < len(hdr) else f"列{ci+1}"
+            vals = []
+            nulls = 0
+            for r in data_rows:
+                v = r[ci] if ci < len(r) else None
+                if v is None or (isinstance(v, str) and v.strip() == ""):
+                    nulls += 1
+                else:
+                    vals.append(v)
+
+            non_null = len(vals)
+            # 判断是否数值列
+            num_vals = []
+            text_vals = []
+            for v in vals:
+                try:
+                    num_vals.append(float(v))
+                except (ValueError, TypeError):
+                    text_vals.append(str(v))
+
+            is_numeric = len(num_vals) >= non_null * 0.8 and non_null > 0
+
+            if is_numeric:
+                numeric_cols += 1
+                n = len(num_vals)
+                s = sorted(num_vals)
+                mn, mx = s[0], s[-1]
+                avg = sum(num_vals) / n
+                var = sum((x - avg)**2 for x in num_vals) / n
+                sd = var ** 0.5
+                # 中位数
+                med = s[n//2] if n % 2 else (s[n//2-1] + s[n//2]) / 2
+                # 四分位数
+                q1 = s[int(n * 0.25)]
+                q3 = s[int(n * 0.75)]
+                iqr = q3 - q1
+                # 众数
+                counter = Counter(num_vals)
+                mode_val, mode_cnt = counter.most_common(1)[0]
+                # 偏度/峰度
+                skew = sum((x - avg)**3 for x in num_vals) / (n * sd**3) if sd > 0 else 0
+                kurt = sum((x - avg)**4 for x in num_vals) / (n * var**2) - 3 if var > 0 else 0
+
+                log.insert(tk.END, f"  📊 【{col_name}】 数值列  (n={n}, 空值={nulls})\n")
+                log.insert(tk.END, f"  {'─'*50}\n")
+                log.insert(tk.END, f"    集中趋势: 平均={avg:.4f}  中位数={med:.4f}  众数={mode_val:.4f}({mode_cnt}次)\n")
+                log.insert(tk.END, f"    离散程度: 标准差={sd:.4f}  方差={var:.4f}\n")
+                log.insert(tk.END, f"    极值:     最小值={mn:.4f}  最大值={mx:.4f}  极差={mx-mn:.4f}\n")
+                log.insert(tk.END, f"    分位数:   25%={q1:.4f}  75%={q3:.4f}  IQR={iqr:.4f}\n")
+                log.insert(tk.END, f"    分布形态: 偏度={skew:.4f}  峰度={kurt:.4f}\n")
+                log.insert(tk.END, f"    总和={sum(num_vals):.2f}\n\n")
+            else:
+                text_cols += 1
+                n = len(text_vals)
+                counter = Counter(text_vals)
+                top5 = counter.most_common(5)
+                unique = len(counter)
+
+                log.insert(tk.END, f"  📝 【{col_name}】 文本列  (总数={non_null}, 空值={nulls})\n")
+                log.insert(tk.END, f"  {'─'*50}\n")
+                log.insert(tk.END, f"    非空值: {non_null}  唯一值: {unique}  空值: {nulls}\n")
+                log.insert(tk.END, f"    最长值: {max(len(str(v)) for v in text_vals)} 字符\n")
+                log.insert(tk.END, f"    最短值: {min(len(str(v)) for v in text_vals)} 字符\n")
+                log.insert(tk.END, f"    前5高频:\n")
+                for val, cnt in top5:
+                    pct = cnt / n * 100 if n > 0 else 0
+                    bar = "█" * int(pct / 5)
+                    log.insert(tk.END, f"      {bar} {val[:20]:<20} {cnt:>4}次 ({pct:.1f}%)\n")
+                log.insert(tk.END, "\n")
+
+        # 总体摘要
+        log.insert(tk.END, f"{'='*60}\n")
+        log.insert(tk.END, f"  📋 总体摘要\n")
+        log.insert(tk.END, f"  总行数: {total_rows}  |  总列数: {total_cols}\n")
+        log.insert(tk.END, f"  数值列: {numeric_cols}  |  文本列: {text_cols}\n")
+        log.insert(tk.END, f"  文件名: {Path(fp).name}\n")
+        log.insert(tk.END, f"  工作表: {ws.title}\n")
+        log.insert(tk.END, f"{'='*60}\n")
+
+        # 状态栏
+        status_var.set(f"✅ 分析完成: {numeric_cols}数值列 + {text_cols}文本列")
+        self.set_status(f"统计分析: {Path(fp).name}")
+
+        # 保存按钮
+        btn_f = tk.Frame(win, bg=win.cget('bg')); btn_f.pack(pady=5)
+        tk.Button(btn_f, text="💾 导出报告", command=lambda: _save_report(), cursor="hand2",
+                  bg=self.colors['primary'], fg="white", font=("微软雅黑", 9)).pack()
+        def _save_report():
+            save = filedialog.asksaveasfilename(defaultextension=".txt",
+                     filetypes=[("文本文件","*.txt")])
+            if save:
+                Path(save).write_text(log.get("1.0", tk.END), encoding="utf-8")
+                self.set_status(f"报告已保存: {Path(save).name}")
 
     def _excel_to_csv_dlg(self):
         fp = filedialog.askopenfilename(title="选择Excel", filetypes=[("Excel","*.xlsx")])
