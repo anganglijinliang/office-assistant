@@ -124,14 +124,7 @@
 
 ## 📥 下载地址
 
-### 方式一：绿色版（免安装）
-📦 [`万能办公助手v6.2商业版.exe`](https://github.com/anganglijinliang/office-assistant/releases/latest/download/万能办公助手v6.2商业版.exe) （153MB）
+📦 [`OfficeAssistant_v6.2_Setup.exe`](https://github.com/anganglijinliang/office-assistant/releases/download/v6.2/OfficeAssistant_v6.2_Setup.exe) （159MB）
 > 下载后直接运行，无需安装
 
-### 方式二：安装版（推荐）
-📦 [`万能办公助手v6.2安装程序.exe`](https://github.com/anganglijinliang/office-assistant/releases/latest/download/万能办公助手v6.2安装程序.exe) （154MB）
-> 安装到 Program Files，自动创建桌面快捷方式和开始菜单，带卸载入口
-
-### 激活码
-🔑 [`万能办公助手_激活码_500个.csv`](https://github.com/anganglijinliang/office-assistant/releases/latest/download/万能办公助手_激活码_500个.csv)
-> 购买后凭激活码激活，¥29.9/年
+> **激活码**请联系作者购买（¥29.9/年），激活码文件不会上传到 GitHub。
