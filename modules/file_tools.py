@@ -362,7 +362,7 @@ class FileToolsMixin:
                 d.delete("1.0", tk.END)
                 for p in files:
                     pobj = Path(p)
-                    d.insert(tk.END, f"📄 {pobj.name}\\n")
+                    d.insert(tk.END, f"📄 {pobj.name}\n")
                     for alg in ["md5","sha1","sha256"]:
                         h = hashlib.new(alg)
                         with open(str(pobj), 'rb') as fh:
@@ -370,8 +370,8 @@ class FileToolsMixin:
                                 chunk = fh.read(65536)
                                 if not chunk: break
                                 h.update(chunk)
-                        d.insert(tk.END, f"  {alg.upper()}: {h.hexdigest()}\\n")
-                    d.insert(tk.END, "\\n")
+                        d.insert(tk.END, f"  {alg.upper()}: {h.hexdigest()}\n")
+                    d.insert(tk.END, "\n")
             except Exception as e: messagebox.showerror("错误", str(e))
         tk.Button(win, text="🔐 计算校验和", command=_go, cursor="hand2",
                  bg=self.colors['primary'], fg="white", font=("微软雅黑", 11, "bold"), width=14).pack(pady=5)
