@@ -13,3 +13,8 @@ test_comprehensive.py
 
 # Windows reserved names
 nul
+
+# 激活码文件（不应上传）
+*激活码*.*
+*.csv
+*.txt
